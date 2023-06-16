@@ -1,1 +1,1 @@
-# speech_recognition_tg_bot
+# Telegram Bot for Speech Recognition
