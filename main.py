@@ -1,62 +1,59 @@
-import os
-
 import requests
 from aiogram import Bot, Dispatcher, types
+from aiogram import executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Command
-from aiogram.utils import executor
+from aiogram.dispatcher.filters.state import State, StatesGroup
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 import config
 
-# Инициализация бота и диспетчера
 bot = Bot(token=config.TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-# URL веб-сервера
-web_server_url = config.URL
+
+class UploadState(StatesGroup):
+    WaitingForAudio = State()
 
 
-@dp.message_handler(content_types=types.ContentType.VOICE)
-async def process_voice_message(message: types.Message, state: FSMContext):
-    # Сохранение голосового сообщения в файл
-    voice_file_id = message.voice.file_id
-    voice_file = await bot.get_file(voice_file_id)
-    voice_file_path = voice_file.file_path
-    voice_file_data = await bot.download_file(voice_file_path)
+@dp.message_handler(content_types=[types.ContentType.AUDIO, types.ContentType.VOICE], state="*")
+async def handle_audio(message: types.Message):
+    # Determine the media type
+    media_type = 'Audio' if message.content_type == 'audio' else 'Voice'
 
-    # Сохранение файла в формате mp3 на сервере
-    mp3_file_path = 'E:/file_3.mp3'
-    with open(mp3_file_path, 'wb') as mp3_file:
-        mp3_file.write(voice_file_data.getvalue())
+    # Download the media file
+    media_file = await bot.download_file_by_id(
+        file_id=message.audio.file_id) if message.content_type == 'audio' else await bot.download_file_by_id(
+        file_id=message.voice.file_id)
 
-    # Отправка ответного сообщения
-    await message.reply('Голосовое сообщение сохранено')
+    await message.reply('Голосовое сообщение отправлено.')
 
-    # Отправка голосового сообщения на веб-сервер
+    # Prepare the multipart/form-data request
     multipart_data = MultipartEncoder(
-        fields={'file': (os.path.basename(mp3_file_path), open(mp3_file_path, 'rb'), 'audio/mpeg')}
+        fields={'file': (f'{media_type.lower()}.mp3', media_file.read(), 'audio/mpeg')}
     )
     headers = {'Content-Type': multipart_data.content_type}
 
-    response = requests.post(web_server_url, data=multipart_data, headers=headers)
+    # Send the media file to the remote server
+    response = requests.post(config.URL, data=multipart_data, headers=headers)
 
+    # Handle the server response
     if response.status_code == 200:
-        # Если запрос успешен, отправляем ответное сообщение от сервера в Telegram
         response_data = response.json()
         detected_language = response_data['detected_language']
         recognized_text = response_data['recognized_text']
         await message.reply(f'Detected Language: {detected_language}\nRecognized Text: {recognized_text}')
     else:
-        await message.reply('Ошибка при отправке голосового сообщения на сервер')
+        await message.reply(f'Не удалось загрузить {media_type.lower()}.')
+
+    # Clean up the downloaded media file
+    media_file.close()
 
 
-@dp.message_handler(Command('start'))
-async def start_command(message: types.Message):
-    await message.reply('Отправь мне голосовое сообщение, и я передам его на распознавание')
+def main():
+    dp.register_message_handler(handle_audio)
+    executor.start_polling(dp, skip_updates=True)
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    main()
