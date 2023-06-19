@@ -4,7 +4,7 @@ This is a Telegram bot implemented in Python that allows users to send audio and
 
 ## Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - Docker (if running in a Docker container)
 
 ## Installation
