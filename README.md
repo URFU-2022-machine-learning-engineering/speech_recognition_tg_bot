@@ -10,8 +10,8 @@ This is a Telegram bot implemented in Python that allows users to send audio and
 ## Installation
 
 1. Clone the repository:
-git clone https://github.com/your-username/speech_recognition_tg_bot.git
-cd telegram-bot
+git clone git@github.com:URFU-2022-machine-learning-engineering/speech_recognition_tg_bot.git
+cd speech_recognition_tg_bot
 
 
 2. Install the required Python dependencies:
