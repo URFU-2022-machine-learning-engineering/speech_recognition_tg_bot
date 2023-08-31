@@ -4,4 +4,6 @@
 venv
 .venv
 __pycache__/
-config.py
+.env
+.local
+.env.local
