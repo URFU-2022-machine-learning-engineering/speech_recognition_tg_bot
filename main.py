@@ -9,7 +9,7 @@ from aiogram.dispatcher.filters import Command
 from aiogram.utils import executor
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class FileManager:
@@ -30,9 +30,9 @@ class FileManager:
 
 
 class VoiceBot:
-    def __init__(self, token: str = os.getenv("TOKEN"), url: str = os.getenv("URL")):
-        self.token = token
-        self.url = url
+    def __init__(self, token: str, url: str):
+        self.token = token if token else os.getenv("TOKEN")
+        self.url = url if url else os.getenv("URL")
         self.bot = Bot(token=self.token)
         self.storage = MemoryStorage()
         self.dp = Dispatcher(bot=self.bot, storage=self.storage)
@@ -83,16 +83,19 @@ class VoiceBot:
         )
 
     def run(self):
-        @self.dp.message_handler(content_types=types.ContentType.AUDIO)
+        @self.dp.message_handler(content_types=[types.ContentType.AUDIO, types.ContentType.VOICE])
         async def process_voice_message(message: types.Message):
-            # Download voice message
-            logging.debug(f"The message is {message}")
-            audio_file_id = message.audio.file_id
+            # Download audio/voice message
+            if message.audio:
+                audio_file_id = message.audio.file_id
+            else:
+                audio_file_id = message.voice.file_id
+
             audio_file = await self.bot.get_file(audio_file_id)
             audio_file_path = audio_file.file_path
             audio_file_data = await self.bot.download_file(audio_file_path)
 
-            # Save voice message and send it
+            # Save audio/voice message and send it for processing
             temp_file_path = await self.file_manager.save_voice_message(audio_file_data)
             await self.send_voice_message(message, temp_file_path)
 
@@ -117,14 +120,8 @@ class VoiceBot:
 
 
 if __name__ == "__main__":
-    from pathlib import Path
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.getLogger("__name__")
 
-    from dotenv import load_dotenv
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-    dotenv_path = Path(".env.local")
-    load_dotenv(dotenv_path=dotenv_path)
-    logging.debug(f"URL is {os.getenv('URL')}")
     voice_bot = VoiceBot(token=os.getenv("TOKEN"), url=os.getenv("URL"))
     voice_bot.run()
