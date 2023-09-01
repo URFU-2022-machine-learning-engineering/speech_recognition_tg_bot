@@ -36,7 +36,7 @@ pipeline {
         attempt_counter=0
         max_attempts=10
 
-        until $(docker logs ${CONTAINER_NAME} 2>&1 | grep "INFO - Start polling."); do
+        until { docker logs "${CONTAINER_NAME}" 2>&1 | grep "INFO - Start polling."; } do
             if [ ${attempt_counter} -eq ${max_attempts} ];then
               echo "Max attempts reached"
               exit 1
