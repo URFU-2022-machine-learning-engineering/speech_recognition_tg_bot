@@ -9,14 +9,14 @@ pipeline {
     stage('prepare') {
     steps {
       sh '''
-        docker_image_id=$(docker images -q ${IMAGE})
+        docker_image_id=$(docker images -q "${IMAGE}")
 
-        if [ ! -z "$docker_image_id" ]; then
-            if [ $(docker stop ${CONTAINER_NAME}) ]; then
+        if [ -n "$docker_image_id" ]; then
+            if [ "$(docker stop ${CONTAINER_NAME})" ]; then
                 echo "container stopped"
             fi
 
-            if [ $(docker rmi "$docker_image_id" -f) ]; then
+            if [ "$(docker rmi "$docker_image_id" -f)" ]; then
                 echo "image removed"
             fi
         fi
@@ -26,7 +26,7 @@ pipeline {
 
     stage('run') {
       steps {
-        sh 'docker run -d --env-file /var/tg_bot/.env --name ${CONTAINER_NAME} --rm ${IMAGE}'
+        sh 'docker run -d --env-file /var/tg_bot/.env --name "${CONTAINER_NAME}" --rm "${IMAGE}"'
       }
     }
 
@@ -43,7 +43,7 @@ pipeline {
             fi
 
             printf '.'
-            attempt_counter=$(($attempt_counter+1))
+            attempt_counter=$((attempt_counter + 1))
             sleep 1
         done
         '''
